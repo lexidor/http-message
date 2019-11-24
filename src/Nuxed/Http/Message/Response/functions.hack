@@ -230,7 +230,7 @@ function with_shared_max_age(
   int $value,
 ): Http\Message\IResponse {
   return _Private\with_cache_control_directive($response, 'public')
-    |> _Private\with_cache_control_directive($response, 's-maxage', $value);
+    |> _Private\with_cache_control_directive($$, 's-maxage', $value);
 }
 
 /**
