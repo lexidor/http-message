@@ -6,7 +6,7 @@ use namespace Nuxed\Contract\Http\Message;
 
 <<__Sealed(ServerRequest::class)>>
 class Request
-  extends Message<IO\SeekableReadWriteHandle>
+  extends Message<IO\SeekableReadHandle>
   implements Message\IRequest {
   protected string $method;
 
@@ -18,7 +18,7 @@ class Request
     string $method,
     Message\IUri $uri,
     KeyedContainer<string, Container<string>> $headers = dict[],
-    ?IO\SeekableReadWriteHandle $body = null,
+    ?IO\SeekableReadHandle $body = null,
     string $version = '1.1',
   ) {
     $this->method = $method;
@@ -67,7 +67,7 @@ class Request
     }
 
     $query = $this->uri->getQuery();
-    if ('' !== $query) {
+    if ($query is nonnull && '' !== $query) {
       $target .= '?'.$query;
     }
 
@@ -161,7 +161,7 @@ class Request
    * Gets the body of the message.
    */
   <<__Override>>
-  public function getBody(): IO\SeekableReadWriteHandle {
+  public function getBody(): IO\SeekableReadHandle {
     if ($this->body is null) {
       $this->body = Body\temporary();
     }
@@ -171,14 +171,17 @@ class Request
 
   protected function updateHostFromUri(): void {
     $host = $this->uri->getHost();
-    if ('' === $host) {
+    if ($host is null) {
       return;
     }
 
     $port = $this->uri->getPort();
+    $schema = $this->uri->getScheme();
 
     if (
-      $port is nonnull && !Uri::isStandardPort($this->uri->getScheme(), $port)
+      $port is nonnull &&
+      $schema is nonnull &&
+      !Uri::isStandardPort($schema, $port)
     ) {
       $host .= ':'.((string)$port);
     }

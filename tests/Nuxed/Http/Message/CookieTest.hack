@@ -10,19 +10,24 @@ class CookieTest extends HackTest\HackTest {
   public function testGetters(): void {
     $cookie = new Message\Cookie(
       'hello',
-      $e = new \DateTime('2020-12-31'),
+      123,
+      456,
       '/',
       'www.facebook.com',
       true,
       true,
-      $s = Http\Message\CookieSameSite::Strict,
+      Http\Message\CookieSameSite::Strict,
     );
     expect($cookie->getValue())->toBeSame('hello');
-    expect($cookie->getExpires())->toBeSame($e);
+    expect($cookie->getExpires())->toBeSame(123);
+    expect($cookie->getMaxAge())->toBeSame(456);
     expect($cookie->getPath())->toBeSame('/');
     expect($cookie->getDomain())->toBeSame('www.facebook.com');
-    expect($cookie->isSecure())->toBeTrue();
-    expect($cookie->isHttpOnly())->toBeTrue();
+    expect($cookie->getSecure())->toBeTrue();
+    expect($cookie->getHttpOnly())->toBeTrue();
+    expect($cookie->getSameSite())->toBeSame(
+      Http\Message\CookieSameSite::Strict,
+    );
   }
 
   public function testWithValue(): void {
@@ -34,17 +39,17 @@ class CookieTest extends HackTest\HackTest {
   }
 
   public function testWithExpires(): void {
-    $cookie = new Message\Cookie('hhvm', $e = new \DateTime('2000-01-01'));
+    $cookie = new Message\Cookie('hhvm', 123);
     $cookie2 = $cookie->withExpires(null);
-    $cookie3 = $cookie2->withExpires(new \DateTime());
+    $cookie3 = $cookie2->withExpires(456);
     expect($cookie2)->toNotBeSame($cookie);
     expect($cookie3)->toNotBeSame($cookie2);
     expect($cookie2->getExpires())->toBeNull();
-    expect($cookie3->getExpires())->toBeInstanceOf(\DateTime::class);
+    expect($cookie3->getExpires())->toBeSame(456);
   }
 
   public function testWithPath(): void {
-    $cookie = new Message\Cookie('waffle', new \DateTime(), '/auth');
+    $cookie = new Message\Cookie('waffle', 123, 456, '/auth');
     $cookie2 = $cookie->withPath('/');
     expect($cookie2)->toNotBeSame($cookie);
     expect($cookie2->getPath())->toBeSame('/');
@@ -53,7 +58,8 @@ class CookieTest extends HackTest\HackTest {
   public function testWithDomain(): void {
     $cookie = new Message\Cookie(
       'waffle',
-      new \DateTime(),
+      123,
+      456,
       '/',
       'thefacebook.com',
     );
@@ -63,23 +69,23 @@ class CookieTest extends HackTest\HackTest {
   }
 
   public function testWithAndWithoutSecure(): void {
-    $cookie = new Message\Cookie('waffle', null, null, null, false);
-    expect($cookie->isSecure())->toBeFalse();
+    $cookie = new Message\Cookie('waffle', null, null, null, null, false);
+    expect($cookie->getSecure())->toBeFalse();
     $cookie2 = $cookie->withSecure(true);
     expect($cookie2)->toNotBeSame($cookie);
-    expect($cookie2->isSecure())->toBeTrue();
+    expect($cookie2->getSecure())->toBeTrue();
     $cookie3 = $cookie2->withoutSecure();
-    expect($cookie3->isSecure())->toBeFalse();
+    expect($cookie3->getSecure())->toBeNull();
   }
 
   public function testWithAndWithoutHttpOnly(): void {
-    $cookie = new Message\Cookie('waffle', null, null, null, false, false);
-    expect($cookie->isHttpOnly())->toBeFalse();
+    $cookie = new Message\Cookie('waffle', null, null, null, null, false, false);
+    expect($cookie->getHttpOnly())->toBeFalse();
     $cookie2 = $cookie->withHttpOnly(true);
     expect($cookie2)->toNotBeSame($cookie);
-    expect($cookie2->isHttpOnly())->toBeTrue();
+    expect($cookie2->getHttpOnly())->toBeTrue();
     $cookie3 = $cookie2->withoutHttpOnly();
-    expect($cookie3->isHttpOnly())->toBeFalse();
+    expect($cookie3->getHttpOnly())->toBeNull();
   }
 
   public function testWithSameSite(): void {
@@ -88,18 +94,19 @@ class CookieTest extends HackTest\HackTest {
       null,
       null,
       null,
+      null,
       false,
       false,
       null,
     );
-    $sss = Http\Message\CookieSameSite::Strict;
-    $ssl = Http\Message\CookieSameSite::Lax;
+    $strict = Http\Message\CookieSameSite::Strict;
+    $lax = Http\Message\CookieSameSite::Lax;
     expect($cookie->getSameSite())->toBeNull();
-    $cookie2 = $cookie->withSameSite($sss);
+    $cookie2 = $cookie->withSameSite($strict);
     expect($cookie2)->toNotBeSame($cookie);
-    expect($cookie2->getSameSite())->toBeSame($sss);
-    $cookie3 = $cookie2->withSameSite($ssl);
+    expect($cookie2->getSameSite())->toBeSame($strict);
+    $cookie3 = $cookie2->withSameSite($lax);
     expect($cookie3)->toNotBeSame($cookie2);
-    expect($cookie3->getSameSite())->toBeSame($ssl);
+    expect($cookie3->getSameSite())->toBeSame($lax);
   }
 }

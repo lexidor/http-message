@@ -17,7 +17,7 @@ function create_server_request_from_globals(): Message\ServerRequest {
   $protocol = (new ProtocolVersionMarshaler())->marshal($server);
   $headers = (new HeadersMarshaler())->marshal($server);
   $uri = (new UriMarshaler())->marshal($server, $headers);
-  $query = HttpNormalizer\parse($uri->getQuery());
+  $query = HttpNormalizer\parse($uri->getQuery() ?? '');
   $server = HttpNormalizer\normalize($server);
   $method = Str\uppercase(($server['REQUEST_METHOD'] ?? 'GET') as string);
   $ct = (string $value): bool ==>

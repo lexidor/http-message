@@ -26,19 +26,19 @@ final class Uri implements Message\IUri {
     'https' => 443,
   ];
 
-  private string $scheme = '';
+  private ?string $scheme = null;
 
-  private (string, ?string) $userInfo = tuple('', null);
+  private ?string $userInfo = null;
 
-  private string $host = '';
+  private ?string $host = null;
 
-  private ?int $port;
+  private ?int $port = null;
 
   private string $path = '';
 
-  private string $query = '';
+  private ?string $query = null;
 
-  private string $fragment = '';
+  private ?string $fragment = null;
 
   public function __construct(string $uri = '') {
     if ('' !== $uri) {
@@ -55,34 +55,64 @@ final class Uri implements Message\IUri {
   }
 
   public function toString(): string {
-    return self::createUriString(
-      $this->scheme,
-      $this->getAuthority(),
-      $this->path,
-      $this->query,
-      $this->fragment,
-    );
+    $uri = '';
+
+    if ($this->scheme is nonnull && '' !== $this->scheme) {
+      $uri .= $this->scheme.':';
+    }
+
+    $authority = $this->getAuthority();
+    if ($authority is nonnull && '' !== $authority) {
+      $uri .= '//'.$authority;
+    }
+
+    $path = $this->path;
+    if (Str\length($path) > 0) {
+      if ('/' !== $path[0]) {
+        if ($authority is nonnull && '' !== $authority) {
+          // If the path is rootless and an authority is present, the path will be prefixed by "/"
+          $path = '/'.$path;
+        }
+      } else if (Str\length($path) > 1 && '/' === $path[1]) {
+        if ($authority is null || '' === $authority) {
+          // If the path is starting with more than one "/" and no authority is present, the
+          // starting slashes will be reduced to one.
+          $path = '/'.Str\trim_left($path, '/');
+        }
+      }
+
+      $uri .= $path;
+    }
+
+    if ($this->query is nonnull && '' !== $this->query) {
+      $uri .= '?'.$this->query;
+    }
+
+    if ($this->fragment is nonnull && '' !== $this->fragment) {
+      $uri .= '#'.$this->fragment;
+    }
+
+    return $uri;
   }
 
   /**
    * Retrieve the scheme component of the URI.
    *
-   * If no scheme is present, this method will return an empty string.
+   * If no scheme is present, this method will return a null.
    *
    * The value returned will be normalized to lowercase, per RFC 3986
    * Section 3.1.
    *
    * @see https://tools.ietf.org/html/rfc3986#section-3.1
    */
-  public function getScheme(): string {
+  public function getScheme(): ?string {
     return $this->scheme;
   }
 
   /**
    * Retrieve the authority component of the URI.
    *
-   * If no authority information is present, this method will return an empty
-   * string.
+   * If no authority information is present, this method will null.
    *
    * The authority syntax of the URI is:
    *
@@ -95,25 +125,19 @@ final class Uri implements Message\IUri {
    *
    * @see https://tools.ietf.org/html/rfc3986#section-3.2
    */
-  public function getAuthority(): string {
-    if ('' === $this->host) {
-      return '';
+  public function getAuthority(): ?string {
+    if ($this->host is null || '' === $this->host) {
+      return null;
     }
 
     $authority = $this->host;
 
-    list($user, $password) = $this->userInfo;
-
-    if ('' !== $user) {
-      if ($password is nonnull) {
-        $authority = Str\format('%s:%s@%s', $user, $password, $authority);
-      } else {
-        $authority = Str\format('%s@%s', $user, $authority);
-      }
+    if ($this->userInfo is nonnull && '' !== $this->userInfo) {
+      $authority = Str\format('%s@%s', $this->userInfo, $authority);
     }
 
     if ($this->port is nonnull) {
-      $authority .= ':'.((string)$this->port);
+      $authority = Str\format('%s:%d', $authority, $this->port);
     }
 
     return $authority;
@@ -122,24 +146,29 @@ final class Uri implements Message\IUri {
   /**
    * Retrieve the user information component of the URI.
    *
-   * If no user information is present, this method will return an empty
-   * string for the user, and null for the password.
+   * If no user information is present, this method MUST return null.
+   *
+   * If a user is present in the URI, this will return that value;
+   * additionally, if the password is also present, it will be appended to the
+   * user value, with a colon (":") separating the values.
+   *
+   * @return string The URI user information, in "username[:password]" format.
    */
-  public function getUserInfo(): (string, ?string) {
+  public function getUserInfo(): ?string {
     return $this->userInfo;
   }
 
   /**
    * Retrieve the host component of the URI.
    *
-   * If no host is present, this method will return an empty string.
+   * If no host is present, this method MUST return null.
    *
    * The value returned will be normalized to lowercase, per RFC 3986
    * Section 3.2.2.
    *
    * @see http://tools.ietf.org/html/rfc3986#section-3.2.2
    */
-  public function getHost(): string {
+  public function getHost(): ?string {
     return $this->host;
   }
 
@@ -169,10 +198,6 @@ final class Uri implements Message\IUri {
    * the front controller, this difference becomes significant. It's the task
    * of the user to handle both "" and "/".
    *
-   * The value returned will be percent-encoded, but without double-encoding
-   * any characters. To determine what characters to encode, please refer to
-   * RFC 3986, Sections 2 and 3.3.
-   *
    * As an example, if the value should include a slash ("/") not intended as
    * delimiter between path segments, that value MUST be passed in encoded
    * form (e.g., "%2F") to the instance.
@@ -187,42 +212,24 @@ final class Uri implements Message\IUri {
   /**
    * Retrieve the query string of the URI.
    *
-   * If no query string is present, this method will return an empty string.
-   *
-   * The leading "?" character is not part of the query and will not be
-   * added.
-   *
-   * The value returned will be percent-encoded, but without double-encoding
-   * any characters. To determine what characters to encode, please refer to
-   * RFC 3986, Sections 2 and 3.4.
-   *
-   * As an example, if a value in a key/value pair of the query string should
-   * include an ampersand ("&") not intended as a delimiter between values,
-   * that value MUST be passed in encoded form (e.g., "%26") to the instance.
+   * If no query string is present, this method MUST return null.
    *
    * @see https://tools.ietf.org/html/rfc3986#section-2
    * @see https://tools.ietf.org/html/rfc3986#section-3.4
    */
-  public function getQuery(): string {
+  public function getQuery(): ?string {
     return $this->query;
   }
 
   /**
    * Retrieve the fragment component of the URI.
    *
-   * If no fragment is present, this method will return an empty string.
-   *
-   * The leading "#" character is not part of the fragment and will not be
-   * added.
-   *
-   * The value returned will be percent-encoded, but without double-encoding
-   * any characters. To determine what characters to encode, please refer to
-   * RFC 3986, Sections 2 and 3.5.
+   * If no fragment is present, this method MUST return null.
    *
    * @see https://tools.ietf.org/html/rfc3986#section-2
    * @see https://tools.ietf.org/html/rfc3986#section-3.5
    */
-  public function getFragment(): string {
+  public function getFragment(): ?string {
     return $this->fragment;
   }
 
@@ -233,10 +240,10 @@ final class Uri implements Message\IUri {
    * This method will retain the state of the current instance, and return
    * an instance that contains the specified scheme.
    *
-   * An empty scheme is equivalent to removing the scheme.
+   * A null value provided for the schema is equivalent to removing the scheme.
    */
-  public function withScheme(string $scheme): this {
-    $scheme = Str\lowercase($scheme);
+  public function withScheme(?string $scheme): this {
+    $scheme = $scheme is nonnull ? Str\lowercase($scheme) : $scheme;
 
     if ($this->scheme === $scheme) {
       return $this;
@@ -252,18 +259,21 @@ final class Uri implements Message\IUri {
   /**
    * Return an instance with the specified user information.
    *
-   * This method will retain the state of the current instance, and return
+   * This method retains the state of the current instance, and return
    * an instance that contains the specified user information.
    *
-   * Password is optional, but the user information must include the
-   * user; an empty string for the user is equivalent to removing user
+   * Password is optional, but the user information MUST include the
+   * user; a null value provided for the user is equivalent to removing user
    * information.
    */
-  public function withUserInfo(string $user, ?string $password = null): this {
-    if ('' === $password) {
-      $password = null;
+  public function withUserInfo(?string $user, ?string $password = null): this {
+    $info = null;
+    if ($user is nonnull && '' !== $user) {
+      $info = $user;
+      if ($password is nonnull && '' !== $password) {
+        $info .= ':'.$password;
+      }
     }
-    $info = tuple($user, $password);
 
     if ($this->userInfo === $info) {
       return $this;
@@ -278,13 +288,10 @@ final class Uri implements Message\IUri {
   /**
    * Return an instance with the specified host.
    *
-   * This method will retain the state of the current instance, and return
-   * an instance that contains the specified host.
-   *
-   * An empty host value is equivalent to removing the host.
+   * A null host value is equivalent to removing the host.
    */
-  public function withHost(string $host): this {
-    $host = Str\lowercase($host);
+  public function withHost(?string $host): this {
+    $host = $host is nonnull ? Str\lowercase($host) : null;
 
     if ($this->host === $host) {
       return $this;
@@ -298,9 +305,6 @@ final class Uri implements Message\IUri {
 
   /**
    * Return an instance with the specified port.
-   *
-   * This method will retain the state of the current instance, and return
-   * an instance that contains the specified port.
    *
    * A null value provided for the port is equivalent to removing the port
    * information.
@@ -323,9 +327,6 @@ final class Uri implements Message\IUri {
 
   /**
    * Return an instance with the specified path.
-   *
-   * This method will retain the state of the current instance, and return
-   * an instance that contains the specified path.
    *
    * The path can either be empty or absolute (starting with a slash) or
    * rootless (not starting with a slash).
@@ -351,12 +352,9 @@ final class Uri implements Message\IUri {
   /**
    * Return an instance with the specified query string.
    *
-   * This method will retain the state of the current instance, and return
-   * an instance that contains the specified query string.
-   *
-   * An empty query string value is equivalent to removing the query string.
+   * A null query string value is equivalent to removing the query string.
    */
-  public function withQuery(string $query): this {
+  public function withQuery(?string $query): this {
     $query = $this->filterQueryAndFragment($query);
     if ($this->query === $query) {
       return $this;
@@ -371,12 +369,9 @@ final class Uri implements Message\IUri {
   /**
    * Return an instance with the specified URI fragment.
    *
-   * This method will retain the state of the current instance, and return
-   * an instance that contains the specified URI fragment.
-   *
-   * An empty fragment value is equivalent to removing the fragment.
+   * A null fragment value is equivalent to removing the fragment.
    */
-  public function withFragment(string $fragment): this {
+  public function withFragment(?string $fragment): this {
     $fragment = $this->filterQueryAndFragment($fragment);
 
     if ($this->fragment === $fragment) {
@@ -395,11 +390,11 @@ final class Uri implements Message\IUri {
   private function applyParts(KeyedContainer<string, arraykey> $parts): void {
     $this->scheme = C\contains_key($parts, 'scheme')
       ? Str\lowercase((string)$parts['scheme'])
-      : '';
+      : null;
 
     $this->host = C\contains_key($parts, 'host')
       ? Str\lowercase((string)$parts['host'])
-      : '';
+      : null;
 
     $this->port = C\contains_key($parts, 'port')
       ? $this->filterPort((int)$parts['port'])
@@ -411,71 +406,23 @@ final class Uri implements Message\IUri {
 
     $this->query = C\contains_key($parts, 'query')
       ? $this->filterQueryAndFragment((string)$parts['query'])
-      : '';
+      : null;
 
     $this->fragment = C\contains_key($parts, 'fragment')
       ? $this->filterQueryAndFragment((string)$parts['fragment'])
-      : '';
+      : null;
 
     if (C\contains_key($parts, 'user')) {
 
-      $this->userInfo = tuple((string)$parts['user'], null);
+      $this->userInfo = (string)$parts['user'];
 
       if (C\contains_key($parts, 'pass')) {
-        $this->userInfo = tuple((string)$parts['user'], (string)$parts['pass']);
+        $this->userInfo = (string)$parts['user'].':'.(string)$parts['pass'];
       }
 
     } else {
-      $this->userInfo = tuple('', null);
+      $this->userInfo = null;
     }
-  }
-
-  /**
-   * Create a URI string from its various parts.
-   */
-  private static function createUriString(
-    string $scheme,
-    string $authority,
-    string $path,
-    string $query,
-    string $fragment,
-  ): string {
-    $uri = '';
-
-    if ('' !== $scheme) {
-      $uri .= $scheme.':';
-    }
-
-    if ('' !== $authority) {
-      $uri .= '//'.$authority;
-    }
-
-    if (Str\length($path) > 0) {
-      if ('/' !== $path[0]) {
-        if ('' !== $authority) {
-          // If the path is rootless and an authority is present, the path will be prefixed by "/"
-          $path = '/'.$path;
-        }
-      } else if (Str\length($path) > 1 && '/' === $path[1]) {
-        if ('' === $authority) {
-          // If the path is starting with more than one "/" and no authority is present, the
-          // starting slashes will be reduced to one.
-          $path = '/'.Str\trim_left($path, '/');
-        }
-      }
-
-      $uri .= $path;
-    }
-
-    if ('' !== $query) {
-      $uri .= '?'.$query;
-    }
-
-    if ('' !== $fragment) {
-      $uri .= '#'.$fragment;
-    }
-
-    return $uri;
   }
 
   /**
@@ -490,7 +437,9 @@ final class Uri implements Message\IUri {
       return null;
     }
 
-    if (static::isStandardPort($this->scheme, $port)) {
+    if (
+      $this->scheme is nonnull && static::isStandardPort($this->scheme, $port)
+    ) {
       return null;
     }
 
@@ -511,7 +460,11 @@ final class Uri implements Message\IUri {
     );
   }
 
-  private function filterQueryAndFragment(string $str): string {
+  private function filterQueryAndFragment(?string $str): ?string {
+    if ($str is null) {
+      return $str;
+    }
+
     return Regex\replace_with(
       $str,
       re"/(?:[^a-zA-Z0-9_\-\.~!\$&\'\(\)\*\+,;=%:@\/\?]++|%(?![A-Fa-f0-9]{2}))/",

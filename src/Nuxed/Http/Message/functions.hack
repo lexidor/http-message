@@ -5,7 +5,8 @@ use namespace Nuxed\Contract\Http\Message;
 
 function cookie(
   string $value,
-  ?\DateTimeInterface $expires = null,
+  ?int $expires = null,
+  ?int $maxAge = null,
   ?string $path = null,
   ?string $domain = null,
   bool $secure = false,
@@ -15,6 +16,7 @@ function cookie(
   return new Cookie(
     $value,
     $expires,
+    $maxAge,
     $path,
     $domain,
     $secure,
