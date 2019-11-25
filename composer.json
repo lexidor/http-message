@@ -27,6 +27,9 @@
         "hhvm/hhast": "^4.25",
         "nuxed/filesystem": "^1.2"
     },
+    "conflict": {
+        "hhvm/hsl-experimental": "<4.31.1"
+    },
     "scripts": {
         "check": [
             "@type-check",
