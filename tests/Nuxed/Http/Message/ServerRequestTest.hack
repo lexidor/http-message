@@ -14,7 +14,7 @@ class ServerRequestTest extends HackTest\HackTest {
       null,
       Http\Message\UploadedFileError::None,
     );
-    $request2 = $request1->withUploadedFiles(['file' => $file]);
+    $request2 = $request1->withUploadedFiles(dict['file' => $file]);
     expect($request2)->toNotBeSame($request1);
     expect($request1->getUploadedFiles())->toBeEmpty();
     expect($request2->getUploadedFiles())->toNotBeEmpty();
