@@ -8,7 +8,7 @@ use namespace Nuxed\Contract\Http\Message;
  */
 final class UploadedFile implements Message\IUploadedFile {
   private bool $moved = false;
-  private ?File\NonDisposableReadHandle $handle;
+  private ?File\CloseableReadHandle $handle;
 
   public function __construct(
     private string $file,
@@ -21,14 +21,14 @@ final class UploadedFile implements Message\IUploadedFile {
   /**
    * Retrieve a handle representing the uploaded file.
    *
-   * This method will return a File\NonDisposableReadHandle instance, representing
+   * This method will return a File\CloseableReadHandle instance, representing
    * the uploaded file. The purpose of this method is to allow utilizing native
    * Hack handles.
    *
    * If the move() method has been called previously, this method will raise
    * an exception.
    */
-  public function getHandle(): File\NonDisposableReadHandle {
+  public function getHandle(): File\CloseableReadHandle {
     if ($this->moved) {
       throw new Exception\UploadedFileAlreadyMovedException(
         'Cannot retrieve file handle after it has already moved.',

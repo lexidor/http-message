@@ -8,8 +8,8 @@ use namespace HH\Lib\Experimental\IO;
 final class LazyHandle
   implements
     IO\SeekableReadWriteHandle,
-    IO\NonDisposableSeekableReadWriteHandle,
-    IO\NonDisposableReadWriteHandle {
+    IO\CloseableSeekableReadWriteHandle,
+    IO\CloseableReadWriteHandle {
 
   private ?IO\SeekableReadWriteHandle $handle = null;
   private (function(): IO\SeekableReadWriteHandle) $factory;
@@ -71,7 +71,7 @@ final class LazyHandle
   }
 
   public async function closeAsync(): Awaitable<void> {
-    if ($this->handle is nonnull && $this->handle is IO\NonDisposableHandle) {
+    if ($this->handle is nonnull && $this->handle is IO\CloseableHandle) {
       await $this->handle->closeAsync();
     }
   }

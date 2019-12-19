@@ -3,11 +3,11 @@ namespace Nuxed\Http\Message\_Private\IO;
 use namespace HH\Lib\Experimental\{File, IO};
 
 final class ResourceHandle
-  extends File\_Private\NonDisposableFileHandle
+  extends File\_Private\CloseableFileHandle
   implements
     IO\SeekableReadWriteHandle,
-    IO\NonDisposableSeekableReadWriteHandle,
-    IO\NonDisposableReadWriteHandle {
+    IO\CloseableSeekableReadWriteHandle,
+    IO\CloseableReadWriteHandle {
   use IO\_Private\LegacyPHPResourceReadHandleTrait;
   use IO\_Private\LegacyPHPResourceWriteHandleTrait;
   use IO\_Private\LegacyPHPResourceSeekableHandleTrait;

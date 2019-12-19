@@ -4,9 +4,7 @@ use namespace HH\Lib\{Math, Str};
 use namespace HH\Lib\Experimental\IO;
 
 final class MemoryHandle
-  implements
-    IO\NonDisposableSeekableReadWriteHandle,
-    IO\SeekableReadWriteHandle {
+  implements IO\CloseableSeekableReadWriteHandle, IO\SeekableReadWriteHandle {
 
   private int $position = 0;
   private ?Awaitable<mixed> $lastOperation;

@@ -17,7 +17,7 @@
         "hhvm": "^4.25",
         "azjezz/http-normalizer": "^1.0",
         "hhvm/hsl": "^4.25",
-        "hhvm/hsl-experimental": "^4.31",
+        "hhvm/hsl-experimental": "^4.37",
         "nuxed/contract": "^0.2",
         "nuxed/json": "^1.0"
     },
