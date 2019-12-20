@@ -250,7 +250,7 @@ function with_ttl(
  *
  * This function adjusts the Cache-Control/max-age directive.
  */
-function set_client_ttl(
+function with_client_ttl(
   Http\Message\IResponse $response,
   int $seconds,
 ): Http\Message\IResponse {
