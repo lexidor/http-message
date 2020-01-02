@@ -9,7 +9,7 @@ final class HeadersMarshaler {
     $headers = dict[];
 
     $valid = (mixed $value): bool ==>
-      $value is Container<_> ? C\count<mixed>($value) > 0 : ((string)$value) !== '';
+      $value is Container<_> ? C\count($value) > 0 : ((string)$value) !== '';
 
     foreach ($server as $key => $value) {
       $key = (string)$key;
@@ -29,7 +29,7 @@ final class HeadersMarshaler {
       }
 
       if (Str\search($key, 'HTTP_') === 0) {
-        $name = (string) \strtr(Str\lowercase(Str\slice($key, 5)), '_', '-');
+        $name = (string)\strtr(Str\lowercase(Str\slice($key, 5)), '_', '-');
 
         if (!$value is Container<_>) {
           $value = vec[(string)$value];
